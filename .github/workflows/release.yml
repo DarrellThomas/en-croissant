@@ -91,6 +91,24 @@ jobs:
           $json | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json
           Write-Host "signCommand: $cli sign %1"
 
+      - name: Test Azure code signing (Windows)
+        if: matrix.platform == 'windows-latest'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          AZURE_CODE_SIGNING_ENDPOINT: ${{ secrets.AZURE_CODE_SIGNING_ENDPOINT }}
+          AZURE_CODE_SIGNING_ACCOUNT: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
+          AZURE_CODE_SIGNING_PROFILE: ${{ secrets.AZURE_CODE_SIGNING_PROFILE }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          Copy-Item "$env:SystemRoot\System32\xcopy.exe" test-sign.exe
+          $cli = "$env:CARGO_HOME\bin\trusted-signing-cli.exe"
+          Write-Host "=== Testing Azure Trusted Signing ==="
+          & $cli sign -v test-sign.exe 2>&1
+          Write-Host "Exit code: $LASTEXITCODE"
+
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
 
