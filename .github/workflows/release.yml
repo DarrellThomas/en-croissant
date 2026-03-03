@@ -36,10 +36,16 @@ jobs:
 
       - name: Configure Windows code signing
         if: matrix.platform == 'windows-latest'
-        shell: bash
+        shell: pwsh
         run: |
-          jq '.bundle.windows = {"signCommand": "trusted-signing-cli sign %1"}' \
-            src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+          $cli = "$env:CARGO_HOME\bin\trusted-signing-cli.exe"
+          Write-Host "Binary exists: $(Test-Path $cli)"
+          & $cli --version
+
+          $json = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -Depth 20
+          $json.bundle.windows = [PSCustomObject]@{ signCommand = "$cli sign %1" }
+          $json | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json
+          Write-Host "signCommand: $cli sign %1"
 
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-24.04'
