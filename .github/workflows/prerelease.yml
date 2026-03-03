@@ -31,6 +31,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Patch tauri.conf.json for fork signing
+        shell: bash
+        run: |
+          # Replace updater pubkey with our own
+          jq '.plugins.updater.pubkey = $key' \
+            --arg key "${{ secrets.TAURI_UPDATER_PUBKEY }}" \
+            src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+
+      - name: Configure Windows code signing
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          jq '.bundle.windows = {"signCommand": "trusted-signing-cli sign %1"}' \
+            src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
+
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-24.04'
         run: |
