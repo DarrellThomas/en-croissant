@@ -81,15 +81,23 @@ jobs:
       - name: Configure Windows code signing
         if: matrix.platform == 'windows-latest'
         shell: pwsh
+        env:
+          AZURE_CODE_SIGNING_ENDPOINT: ${{ secrets.AZURE_CODE_SIGNING_ENDPOINT }}
+          AZURE_CODE_SIGNING_ACCOUNT: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
+          AZURE_CODE_SIGNING_PROFILE: ${{ secrets.AZURE_CODE_SIGNING_PROFILE }}
         run: |
           $cli = "$env:CARGO_HOME\bin\trusted-signing-cli.exe"
           Write-Host "Binary exists: $(Test-Path $cli)"
           & $cli --version
 
+          $endpoint = $env:AZURE_CODE_SIGNING_ENDPOINT
+          $account = $env:AZURE_CODE_SIGNING_ACCOUNT
+          $certificate = $env:AZURE_CODE_SIGNING_PROFILE
+
           $json = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -Depth 20
-          $json.bundle.windows = [PSCustomObject]@{ signCommand = "$cli sign %1" }
+          $json.bundle.windows = [PSCustomObject]@{ signCommand = "$cli -e $endpoint -a $account -c $certificate %1" }
           $json | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json
-          Write-Host "signCommand: $cli sign %1"
+          Write-Host "signCommand configured with endpoint, account, certificate baked in"
 
       - name: Test Azure code signing (Windows)
         if: matrix.platform == 'windows-latest'
@@ -106,7 +114,7 @@ jobs:
           Copy-Item "$env:SystemRoot\System32\xcopy.exe" test-sign.exe
           $cli = "$env:CARGO_HOME\bin\trusted-signing-cli.exe"
           Write-Host "=== Testing Azure Trusted Signing ==="
-          & $cli sign -v test-sign.exe 2>&1
+          & $cli -e $env:AZURE_CODE_SIGNING_ENDPOINT -a $env:AZURE_CODE_SIGNING_ACCOUNT -c $env:AZURE_CODE_SIGNING_PROFILE test-sign.exe 2>&1
           Write-Host "Exit code: $LASTEXITCODE"
 
       - name: Build the app
@@ -116,9 +124,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-          AZURE_CODE_SIGNING_ENDPOINT: ${{ secrets.AZURE_CODE_SIGNING_ENDPOINT }}
-          AZURE_CODE_SIGNING_ACCOUNT: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
-          AZURE_CODE_SIGNING_PROFILE: ${{ secrets.AZURE_CODE_SIGNING_PROFILE }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
