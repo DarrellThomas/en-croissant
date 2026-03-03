@@ -4,9 +4,7 @@
     "category": "BoardGame",
     "copyright": "",
     "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "signCommand": "trusted-signing-cli sign %1"
     },
     "icon": [
       "icons/32x32.png",
