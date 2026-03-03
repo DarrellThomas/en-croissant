@@ -34,19 +34,6 @@ jobs:
             --arg key "${{ secrets.TAURI_UPDATER_PUBKEY }}" \
             src-tauri/tauri.conf.json > tmp.json && mv tmp.json src-tauri/tauri.conf.json
 
-      - name: Configure Windows code signing
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          $cli = "$env:CARGO_HOME\bin\trusted-signing-cli.exe"
-          Write-Host "Binary exists: $(Test-Path $cli)"
-          & $cli --version
-
-          $json = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -Depth 20
-          $json.bundle.windows = [PSCustomObject]@{ signCommand = "$cli sign %1" }
-          $json | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json
-          Write-Host "signCommand: $cli sign %1"
-
       - name: Install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-24.04'
         run: |
@@ -90,6 +77,19 @@ jobs:
       - name: Install Azure Trusted Signing CLI (Windows)
         if: matrix.platform == 'windows-latest'
         run: cargo install trusted-signing-cli
+
+      - name: Configure Windows code signing
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $cli = "$env:CARGO_HOME\bin\trusted-signing-cli.exe"
+          Write-Host "Binary exists: $(Test-Path $cli)"
+          & $cli --version
+
+          $json = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -Depth 20
+          $json.bundle.windows = [PSCustomObject]@{ signCommand = "$cli sign %1" }
+          $json | ConvertTo-Json -Depth 20 | Set-Content src-tauri/tauri.conf.json
+          Write-Host "signCommand: $cli sign %1"
 
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
